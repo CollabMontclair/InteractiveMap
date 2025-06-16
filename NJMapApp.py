@@ -24,7 +24,7 @@ center_lon = (nj_boundary.bounds[0] + nj_boundary.bounds[2]) / 2
 def load_data():
     return pd.read_excel("Activities_cleaned.xlsx")
 
-final_df = pd.read_excel("Activities_cleaned")
+final_df = pd.read_excel("Activities_cleaned.xlsx")
 
 # --- Extract unique focus areas ---
 def get_unique_focus_areas(series):
