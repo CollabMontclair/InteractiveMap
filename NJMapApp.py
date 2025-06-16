@@ -24,7 +24,7 @@ center_lon = (nj_boundary.bounds[0] + nj_boundary.bounds[2]) / 2
 def load_data():
     return pd.read_excel("Activities_cleaned.xlsx")
 
-df = pd.read_excel("Activities_cleaned")
+final_df = pd.read_excel("Activities_cleaned")
 
 # --- Extract unique focus areas ---
 def get_unique_focus_areas(series):
@@ -33,7 +33,7 @@ def get_unique_focus_areas(series):
         focus_set.update([f.strip() for f in entry.split(",")])
     return sorted(focus_set)
 
-focus_areas = get_unique_focus_areas(df["focus_cleaned"])
+focus_areas = get_unique_focus_areas(final_df["focus_cleaned"])
 
 # --- Streamlit UI ---
 st.title("NJ Activities Map by Focus Area")
