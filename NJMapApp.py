@@ -1,34 +1,31 @@
 import streamlit as st
 import folium
-from folium.plugins import MarkerCluster
-from streamlit_folium import st_folium
 import requests
 import pandas as pd
 from shapely.geometry import shape, Point, Polygon, MultiPolygon
+from folium.plugins import MarkerCluster
+from streamlit_folium import st_folium
 
-# --- Load NJ counties ---
-@st.cache_data
-def load_nj_boundary():
-    url = "https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json"
-    geojson_data = requests.get(url).json()
-    nj_features = [f for f in geojson_data['features'] if f['properties']['STATE'] == '34']
-    nj_polygons = [shape(f['geometry']) for f in nj_features]
-    boundary = MultiPolygon(nj_polygons)
-    return geojson_data, nj_features, boundary
+# --- Load NJ counties (FIPS = '34') GeoJSON ---
+url = "https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json"
+geojson_data = requests.get(url).json()
+nj_features = [f for f in geojson_data['features'] if f['properties']['STATE'] == '34']
 
-geojson_data, nj_features, nj_boundary = load_nj_boundary()
+nj_polygons = [shape(f['geometry']) for f in nj_features]
+nj_boundary = MultiPolygon(nj_polygons)
+
 minx, miny, maxx, maxy = nj_boundary.bounds
 center_lat = (miny + maxy) / 2
 center_lon = (minx + maxx) / 2
 
-# --- Load your dataset ---
-@st.cache_data
-def load_data():
-    return pd.read_excel("Acitivities_cleaned.xlsx")
+# --- Load actual Excel data from the same directory ---
+try:
+    final_df = pd.read_excel("Acitivities_cleaned.xlsx")
+except Exception as e:
+    st.error(f"Error loading Excel file: {e}")
+    st.stop()
 
-final_df = load_data()
-
-# --- Helper to extract unique items from comma-separated strings ---
+# --- Helper function to extract unique items from comma-separated strings in a series ---
 def extract_unique(series):
     items = set()
     for entry in series.dropna():
@@ -41,48 +38,46 @@ focus_area_list = extract_unique(final_df['focus_cleaned'])
 activity_list = sorted(final_df['activity_name'].dropna().unique())
 campus_partner_list = extract_unique(final_df['campus_partners'])
 
-# --- Sidebar Filters ---
-st.sidebar.title("Filter Activities")
+# --- Streamlit widgets ---
+faculty_dropdown = st.selectbox('Faculty:', ['All'] + faculty_list)
+focus_area_select = st.multiselect('Focus Areas:', focus_area_list)
+activity_dropdown = st.selectbox('Activity:', ['All'] + activity_list)
+campus_dropdown = st.selectbox('Campus:', ['All'] + campus_partner_list)
 
-selected_faculty = st.sidebar.selectbox("Faculty Partner", ["All"] + faculty_list)
-selected_focus_areas = st.sidebar.multiselect("Focus Areas", focus_area_list)
-selected_activity = st.sidebar.selectbox("Activity Name", ["All"] + activity_list)
-selected_campus = st.sidebar.selectbox("Campus Partner", ["All"] + campus_partner_list)
-
-# --- Filter Logic ---
+# --- Filter markers ---
 filtered_points = []
 
 for _, row in final_df.iterrows():
-    if pd.isna(row['lat_jittered']) or pd.isna(row['long_jittered']):
-        continue
     point = Point(row['long_jittered'], row['lat_jittered'])
     if not nj_boundary.contains(point):
-        continue
+        continue  # Skip points outside NJ
 
     faculty_names = [f.strip() for f in str(row['faculty_partners']).split(',')] if pd.notna(row['faculty_partners']) else []
     focus_values = [f.strip() for f in str(row['focus_cleaned']).split(',')] if pd.notna(row['focus_cleaned']) else []
     campus_names = [c.strip() for c in str(row['campus_partners']).split(',')] if pd.notna(row['campus_partners']) else []
 
-    if ((selected_faculty == 'All' or selected_faculty in faculty_names) and
-        (not selected_focus_areas or all(f in focus_values for f in selected_focus_areas)) and
-        (selected_activity == 'All' or selected_activity == row['activity_name']) and
-        (selected_campus == 'All' or selected_campus in campus_names)):
+    if ((faculty_dropdown == 'All' or faculty_dropdown in faculty_names) and
+        (not focus_area_select or all(f in focus_values for f in focus_area_select)) and
+        (activity_dropdown == 'All' or activity_dropdown == row['activity_name']) and
+        (campus_dropdown == 'All' or campus_dropdown in campus_names)):
         filtered_points.append((point, row))
 
 total_markers = len(filtered_points)
 
-# --- Count markers per county ---
+# Count markers per county
 county_marker_counts = {f['properties']['NAME']: 0 for f in nj_features}
 for point, _ in filtered_points:
     for feature in nj_features:
+        county_name = feature['properties']['NAME']
         geom = shape(feature['geometry'])
         if geom.contains(point):
-            county_marker_counts[feature['properties']['NAME']] += 1
+            county_marker_counts[county_name] += 1
             break
 
-# --- Build Folium Map ---
+# --- Create Folium map ---
 m = folium.Map(location=[center_lat, center_lon], zoom_start=8, tiles=None)
 
+# Add tile layer without labels (clean background)
 folium.TileLayer(
     tiles='https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_nolabels/{z}/{x}/{y}.png',
     attr='© OpenStreetMap contributors, © CARTO',
@@ -90,25 +85,25 @@ folium.TileLayer(
     control=False
 ).add_to(m)
 
-m.fit_bounds([[miny, minx], [maxy, maxx]])
-m.options['maxBounds'] = [[miny, minx], [maxy, maxx]]
-
-# --- Add NJ County Borders ---
+# Add NJ counties borders
 folium.GeoJson(
-    {"type": "FeatureCollection", "features": nj_features},
+    {
+        "type": "FeatureCollection",
+        "features": nj_features
+    },
     style_function=lambda x: {
-        "fillColor": "#ffffff00",
+        "fillColor": "#ffffff00",  # transparent fill
         "color": "blue",
         "weight": 2,
     }
 ).add_to(m)
 
-# --- Add County Labels with Percentages ---
+# Add county labels with percentage if percentage > 0
 for feature in nj_features:
     county_name = feature['properties']['NAME']
     geom = shape(feature['geometry'])
     centroid = geom.centroid
-    count = county_marker_counts[county_name]
+    count = county_marker_counts.get(county_name, 0)
     percentage = (count / total_markers * 100) if total_markers > 0 else 0
     if percentage > 0:
         label_html = f"""
@@ -117,13 +112,18 @@ for feature in nj_features:
             <span style="font-weight: normal; color: black;">{percentage:.1f}%</span>
         </div>
         """
-        folium.Marker(
-            location=[centroid.y, centroid.x],
+        folium.map.Marker(
+            [centroid.y, centroid.x],
             icon=folium.DivIcon(html=label_html)
         ).add_to(m)
 
-# --- Mask Area Outside NJ ---
-world = Polygon([(-180, -90), (-180, 90), (180, 90), (180, -90)])
+# Mask outside NJ with white polygon
+world = Polygon([
+    (-180, -90),
+    (-180, 90),
+    (180, 90),
+    (180, -90)
+])
 holes = [poly.exterior.coords[:] for poly in nj_boundary.geoms]
 mask_polygon = Polygon(world.exterior.coords, holes=holes)
 folium.GeoJson(
@@ -136,10 +136,9 @@ folium.GeoJson(
     }
 ).add_to(m)
 
-# --- Add Marker Cluster ---
+# Add marker cluster for filtered points
 marker_cluster = MarkerCluster().add_to(m)
 
-# --- Add Markers ---
 for _, row in filtered_points:
     popup_html = f"""
     <div style="width: 300px; font-size: 13px;">
@@ -160,7 +159,5 @@ for _, row in filtered_points:
         tooltip=row['activity_name']
     ).add_to(marker_cluster)
 
-# --- Display Final Map ---
-st.title("New Jersey Collaboratory Activities Map")
-st.markdown("This interactive map shows campus and community engagement activities across NJ.")
-st_folium(m, width=1100, height=600)
+# Render map in Streamlit
+st_data = st_folium(m, width=700, height=600)
