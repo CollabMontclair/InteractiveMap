@@ -53,11 +53,14 @@ for _, row in final_df.iterrows():
         continue  # Skip points outside NJ
 
     faculty_names = [f.strip() for f in str(row['faculty_partners']).split(',')] if pd.notna(row['faculty_partners']) else []
-    focus_values = [f.strip() for f in str(row['focus_cleaned']).split(',')] if pd.notna(row['focus_cleaned']) else []
+focus_values = [f.strip().lower() for f in str(row['focus_cleaned']).split(',')] if pd.notna(row['focus_cleaned']) else []
+selected_focuses = [f.lower() for f in focus_area_select]
+...
+(not selected_focuses or any(f in focus_values for f in selected_focuses))
     campus_names = [c.strip() for c in str(row['campus_partners']).split(',')] if pd.notna(row['campus_partners']) else []
 
     if ((faculty_dropdown == 'All' or faculty_dropdown in faculty_names) and
-        (not focus_area_select or all(f in focus_values for f in focus_area_select)) and
+        (not focus_area_select or any(f in focus_values for f in focus_area_select)) and
         (activity_dropdown == 'All' or activity_dropdown == row['activity_name']) and
         (campus_dropdown == 'All' or campus_dropdown in campus_names)):
         filtered_points.append((point, row))
