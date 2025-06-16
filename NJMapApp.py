@@ -20,9 +20,7 @@ center_lat = (nj_boundary.bounds[1] + nj_boundary.bounds[3]) / 2
 center_lon = (nj_boundary.bounds[0] + nj_boundary.bounds[2]) / 2
 
 # --- Load Excel data ---
-@st.cache_data
-def load_data():
-    return pd.read_excel("Activities_cleaned.xlsx")
+
 
 final_df = pd.read_excel("Activities_cleaned.xlsx")
 
