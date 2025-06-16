@@ -39,7 +39,7 @@ selected_focus_areas = st.multiselect("Select Focus Area(s):", focus_areas)
 
 # --- Filter points ---
 filtered_rows = []
-for _, row in df.iterrows():
+for _, row in final_df.iterrows():
     if not pd.notna(row['lat_jittered']) or not pd.notna(row['long_jittered']):
         continue
     point = Point(row['long_jittered'], row['lat_jittered'])
