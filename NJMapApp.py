@@ -57,7 +57,7 @@ for _, row in final_df.iterrows():
     campus_names = [c.strip() for c in str(row['campus_partners']).split(',')] if pd.notna(row['campus_partners']) else []
 
     if ((faculty_dropdown == 'All' or faculty_dropdown in faculty_names) and
-        (not focus_area_select or any(f in focus_values for f in focus_area_select)) and
+        (not focus_area_select or all(f in focus_values for f in focus_area_select)) and
         (activity_dropdown == 'All' or activity_dropdown == row['activity_name']) and
         (campus_dropdown == 'All' or campus_dropdown in campus_names)):
         filtered_points.append((point, row))
