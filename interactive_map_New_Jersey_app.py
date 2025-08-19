@@ -46,7 +46,7 @@ def reset_filters():
 
 def main():
     st.title("Interactive Map of Activities in NJ")
-    st.markdown("**-  Count shows number of locations**")
+    st.markdown("**-  Count Shows Number of Activity locations**")
 
     nj_features = load_nj_counties()
     df = load_data()
@@ -159,10 +159,10 @@ def main():
 
             popup_html = f"""
             <div style="width:300px; font-size:13px;">
-                <b>Activity:</b> <a href="{row['activity_url']}" target="_blank">{row['activity_name']}</a><br>
-                <b>Faculty:</b> {row['faculty_partners']}<br>
-                <b>Campus:</b> {row['campus_partners']}<br>
-                <b>Contact:</b> <a href="mailto:{row['primary_contact_email']}">{row['primary_contact_email']}</a>
+                <b>Activity: </b> <a href="{row['activity_url']}" target="_blank">{row['activity_name']}</a><br>
+                <b>Faculty/Staff: </b> {row['faculty_partners']}<br>
+                <b>Campus: </b> {row['campus_partners']}<br>
+                <b>Contact: </b> <a href="mailto:{row['primary_contact_email']}">{row['primary_contact_email']}</a>
             </div>
             """
 
