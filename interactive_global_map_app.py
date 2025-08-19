@@ -54,7 +54,7 @@ def reset_filters():
     st.session_state.selected_tile = 'OpenStreetMap'
 
 st.title("Interactive Map of Activities")
-st.markdown("**- Count shows number of locations**")
+st.markdown("**- Count Shows Number of Activity locations**")
 
 tile_options = {
     'OpenStreetMap': 'OpenStreetMap',
@@ -117,11 +117,11 @@ for _, row in filtered_df.iterrows():
 
     popup_html = f"""
     <div style="width: 300px; font-size: 13px;">
-    <b>Activity:</b> <a href="{row['activity_url']}" target="_blank">{row['activity_name']}</a><br>
-    <b>Faculty:</b> {faculty_display}<br>
+    <b>Activity: </b> <a href="{row['activity_url']}" target="_blank">{row['activity_name']}</a><br>
+    <b>Faculty/Staff: </b> {faculty_display}<br>
     <b>Campus Partners:</b> {row['campus_partners']}<br>
-    <b>Community Partners:</b> {row['community_organizations']}<br>
-    <b>Primary Contact:</b> <a href="mailto:{row['primary_contact_email']}">{row['primary_contact_email']}</a>
+    <b>Community Partners: </b> {row['community_organizations']}<br>
+    <b>Primary Contact: </b> <a href="mailto:{row['primary_contact_email']}">{row['primary_contact_email']}</a>
     </div>
     """
 
